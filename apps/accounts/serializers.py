@@ -65,3 +65,47 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'posts_count', 'comments_count'
         )
         read_only_fields = ('id', 'created_at', 'updated_at')
+
+    def get_posts_count(self, obj):
+        return obj.posts.count()
+
+    def get_comments_count(self, obj):
+        return obj.comments.count()
+
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+
+    class Mete:
+        model = User
+        fields = ('first_name', 'last_name', 'avatar', 'bio')
+
+    def update(self, instance, validated_data):
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True,
+                                         validators=[validate_password])
+    new_password_confirm = serializers.CharField(required=True)
+
+    def validate_old_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError('Old password is incorrect.')
+        return value
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password_confirm']:
+            raise serializers.ValidationError(
+                {'password': 'Password fields not match'})
+        return attrs
+
+    def save(self):
+        user = self.context['request'].user
+        user.set_password(self.validated_data['new_password'])
+        user.save()
+        return user
