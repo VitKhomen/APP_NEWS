@@ -4,7 +4,7 @@ from .models import Category, Post
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    post_count = serializers.SerializerMethodField()
+    posts_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
@@ -12,8 +12,8 @@ class CategorySerializer(serializers.ModelSerializer):
                   'posts_count', 'created_at']
         read_only_fields = ['slug', 'created_at']
 
-    def get_post_count(self, obj):
-        return obj.post.filter(status='published').count()
+    def get_posts_count(self, obj):
+        return obj.posts.filter(status='published').count()
 
     def create(self, validated_data):
         validated_data['slug'] = slugify(validated_data['name'])
@@ -62,7 +62,7 @@ class PostDetailSerializer(serializers.ModelSerializer):
         return {
             'id': author.id,
             'username': author.username,
-            'fullname': author.fullname,
+            'fullname': author.full_name,
             'avatar': author.avatar.url if author.avatar else None,
         }
 

@@ -16,7 +16,7 @@ class CategoryListCreateView(generics.ListCreateAPIView):
     serializer_class = CategorySerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'descriptions']
+    search_fields = ['name', 'description']
     ordering_fields = ['name', 'created_at']
     ordering = ['name']
 
@@ -70,7 +70,7 @@ class PostDetailView(generics.RetrieveUpdateDestroyAPIView):
         instance = self.get_object()
 
         if request.method == 'GET':
-            instance.increments_view()
+            instance.increment_views()
 
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
@@ -100,7 +100,7 @@ def post_by_category(request, category_slug):
     posts = Post.objects.filter(
         category=category,
         status='published'
-    ).select_related('author', 'category ').order_by('-created_at')
+    ).select_related('author', 'category').order_by('-created_at')
 
     serializer = PostListSerializer(posts, many=True,
                                     context={'request': request})
@@ -116,7 +116,7 @@ def post_by_category(request, category_slug):
 def popular_posts(request):
     posts = Post.objects.filter(
         status='published'
-    ).select_related('author', 'category ').order_by('-views_count')[:10]
+    ).select_related('author', 'category').order_by('-views_count')[:10]
 
     serializer = PostListSerializer(posts, many=True,
                                     context={'request': request})
@@ -126,10 +126,10 @@ def popular_posts(request):
 
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
-def recent_posts(request, category_slug):
+def recent_posts(request):
     posts = Post.objects.filter(
         status='published'
-    ).select_related('author', 'category ').order_by('-created_at')[:10]
+    ).select_related('author', 'category').order_by('-created_at')[:10]
 
     serializer = PostListSerializer(posts, many=True,
                                     context={'request': request})

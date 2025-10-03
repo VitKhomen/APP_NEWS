@@ -4,9 +4,9 @@ from . import views
 
 urlpatterns = [
     path('category/', views.CategoryListCreateView.as_view(), name='category-list'),
-    path('category/<slug:slug>', views.CategoryDetailView.as_view(),
+    path('category/<slug:slug>/', views.CategoryDetailView.as_view(),
          name='category-detail'),
-    path('category/<category_slug:slug>/posts',
+    path('category/<slug:category_slug>/posts/',
          views.post_by_category, name='post-by-category'),
 
     path('', views.PostListCreateView.as_view(), name='post-list'),
