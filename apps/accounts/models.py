@@ -1,8 +1,8 @@
 from django.db import models
-from django.contrib.auth.models import AbstractBaseUser
+from django.contrib.auth.models import AbstractUser
 
 
-class User(AbstractBaseUser):
+class User(AbstractUser):
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=30, blank=True)
     last_name = models.CharField(max_length=30, blank=True)
@@ -17,8 +17,11 @@ class User(AbstractBaseUser):
 
     class Meta:
         db_table = 'users'
-        verbose_name = 'user'
-        verbose_name_plural = 'users'
+        verbose_name = 'User'
+        verbose_name_plural = 'Users'
+
+    def __str__(self):
+        return self.email
 
     @property
     def full_name(self):

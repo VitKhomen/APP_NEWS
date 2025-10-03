@@ -23,7 +23,7 @@ class RegistrationView(generics.CreateAPIView):
         refresh = RefreshToken.for_user(user)
 
         return Response({
-            'user': UserProfileSerializer(user.data),
+            'user': UserProfileSerializer(user).data,
             'refresh': str(refresh),
             'access': str(refresh.access_token),
             'message': 'User register successfully'
@@ -43,7 +43,7 @@ class LoginView(generics.GenericAPIView):
         refresh = RefreshToken.for_user(user)
 
         return Response({
-            'user': UserProfileSerializer(user.data),
+            'user': UserProfileSerializer(user).data,
             'refresh': str(refresh),
             'access': str(refresh.access_token),
             'message': 'User login successfully'

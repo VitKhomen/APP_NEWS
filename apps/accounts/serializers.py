@@ -29,7 +29,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
 class UserLoginSerializer(serializers.Serializer):
-    email = serializers.EmailField
+    email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
@@ -67,15 +67,25 @@ class UserProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'created_at', 'updated_at')
 
     def get_posts_count(self, obj):
-        return obj.posts.count()
+        """Безопасное получение количества постов"""
+        try:
+            return obj.posts.count()
+        except AttributeError:
+            # Если атрибут posts не существует, возвращаем 0
+            return 0
 
     def get_comments_count(self, obj):
-        return obj.comments.count()
+        """Безопасное получение количества комментариев"""
+        try:
+            return obj.comments.count()
+        except AttributeError:
+            # Если атрибут comments не существует, возвращаем 0
+            return 0
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
 
-    class Mete:
+    class Meta:
         model = User
         fields = ('first_name', 'last_name', 'avatar', 'bio')
 
@@ -99,7 +109,7 @@ class ChangePasswordSerializer(serializers.Serializer):
         return value
 
     def validate(self, attrs):
-        if attrs['password'] != attrs['password_confirm']:
+        if attrs['new_password'] != attrs['new_password_confirm']:
             raise serializers.ValidationError(
                 {'password': 'Password fields not match'})
         return attrs
