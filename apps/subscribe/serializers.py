@@ -170,7 +170,7 @@ class UserSubscriptionStatusSerializer(serializers.Serializer):
 
 
 class PinPostSerializer(serializers.Serializer):
-    '''серіфлайзер для закрепленного поста'''
+    '''серіфлайзер для закреплення поста'''
     post_id = serializers.IntegerField()
 
     def validate_post(self, value):
