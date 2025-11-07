@@ -75,7 +75,7 @@ class Subscription(models.Model):
         delta = self.end_date - timezone.now()
         return max(0, delta.days)
 
-    def extend_subs(self, days=30):
+    def extend_subscription(self, days=30):
         if self.is_active:
             self.end_date += timedelta(days=days)
         else:
@@ -84,16 +84,16 @@ class Subscription(models.Model):
             self.status = 'active'
         self.save()
 
-    def cancel_subs(self):
+    def cancel(self):
         self.status = 'cancelled'
         self.auto_renew = False
         self.save()
 
-    def expire_subs(self):
+    def expire(self):
         self.status = 'expired'
         self.save()
 
-    def activate_subs(self):
+    def activate(self):
         self.status = 'active'
         self.start_date = timezone.now()
         self.end_date = self.start_date + \

@@ -58,7 +58,7 @@ def send_subscription_expired_reminder():
         auto_renew=False,
     )
 
-    send_count = 0
+    sent_count = 0
 
     for subscription in expiring_subscriptions:
         try:
@@ -72,10 +72,10 @@ def send_subscription_expired_reminder():
                 recipient_list=[subscription.user.email],
                 fail_silently=True
             )
-            sending_count = 0
+            sent_count += 1
 
         except Exception as e:
             # Логируєм но продовжуємо работу
             print(f'Failed to send reminder to {subscription.user}: {e}')
 
-    return {'reminder_send': send_count}
+    return {'reminder_send': sent_count}

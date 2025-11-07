@@ -171,7 +171,7 @@ def pin_post(request):
 def unpin_post(request):
     '''Відкріплення пост користувача'''
     serializer = UnpinPostSerializer(
-        data=request.data, context={'request', request})
+        data=request.data, context={'request': request})
 
     if serializer.is_valid():
         try:
@@ -210,8 +210,8 @@ def cancel_subscription(request):
             # записуємо історію
             SubscriptionHistory.objects.create(
                 subscription=subscription,
-                action='canceled',
-                description='Subscription canceled by user'
+                action='cancelled',
+                description='Subscription cancelled by user'
             )
 
         return Response({

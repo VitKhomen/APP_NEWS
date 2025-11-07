@@ -36,7 +36,7 @@ def subscription_pre_delete(sender, instance, **kwargs):
 
 
 @receiver(post_save, sender=PinnedPost)
-def subscription_post_save(sender, instance, created, **kwargs):
+def pinned_post_post_save(sender, instance, created, **kwargs):
     '''Обробник збереження закріпленного поста'''
     if created:
         # перевіряємо шо у користувача є активна підписка
