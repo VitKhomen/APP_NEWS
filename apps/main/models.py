@@ -25,7 +25,36 @@ class Category(models.Model):
         super().save(*args, **kwargs)
 
 
+class PostManager(models.Manager):
+    '''Менеджер для моделі пост с доп методами'''
+
+    def published(self):
+        return self.filter(status='published')
+
+    def pinned_post(self):
+        '''Вертає закріплені пости по даті закріплення'''
+        return self.filter(
+            pin_info__isnull=False,
+            pin_info__user__subscription__status='active',
+            pin_info__user__subscription__end_data__gt=models.functions.now(),
+            status='published'
+        ).select_related(
+            'pin_info', 'pin_info__user', 'pin_info__user__subcription'
+        ).order_by('pin_info__pinned_at')
+
+    def regular_posts(self):
+        """Вертає незакріпленні псти"""
+        return self.filter(pin_info__isnull=True, status='published')
+
+    def with_subscription_info(self):
+        """Додає шнформацію об авторі"""
+        return self.select_related(
+            'author', 'author__subscription', 'category'
+        ).prefetch_related('pin_info')
+
+
 class Post(models.Model):
+    '''Модель поста блого с можливістю закріплення'''
 
     STATUS_CHOICES = [
         ('draft', 'Draft'),
@@ -50,6 +79,8 @@ class Post(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     views_count = models.PositiveIntegerField(default=0)
+
+    objects = PostManager()
 
     class Meta:
         db_table = 'posts'
@@ -78,6 +109,56 @@ class Post(models.Model):
     def comments_count(self):
         return self.comments.filter(is_active=True).count()
 
+    @property
+    def is_pinned(self):
+        '''Перевіряє чи заріплен пост'''
+        return hasattr(self, 'pin_info') and self.pin_info is not None
+
+    @property
+    def can_be_pinned_by_user(self):
+        '''Перевіряє чи можна закріпити пост'''
+        # Це свойство не повинно приймати параметри
+        # Логіка повинна бути винесена в окремий метод
+
+        # Пост повинен бути опублікован
+        if self.status != 'published':
+            return False
+
+        return True
+
+    def can_be_pinned_by(self, user):
+        """Преревіряє чи може юзер закріпити пост"""
+        if not user or not user.is_authenticated:
+            return False
+
+        # Пост має належити юзеру
+        if self.author != user:
+            return False
+
+        # Пост має буди оублікован
+        if self.status != 'published':
+            return False
+
+        # У користувача повинна бути активна підписка
+        if not hasattr(user, 'subscription') or not user.subscription.is_active:
+            return False
+
+        return True
+
     def increment_views(self):
         self.views_count += 1
         self.save(update_fields=['views_count'])
+
+    def get_pinned_info(self):
+        """Вертає інформацію о закріпленні поста"""
+        if self.is_pinned:
+            return {
+                'is_pinned': True,
+                'pinned_at': self.pin_info.pinned_at,
+                'pinned_by': {
+                    'id': self.pin_info.user.id,
+                    'username': self.pin_info.user.username,
+                    'has_active_subscription': self.pin_info.user.subscription.is_active
+                }
+            }
+        return {'is_pinned': False}

@@ -128,7 +128,7 @@ def subscription_status(request):
 def pin_post(request):
     '''закріпляє пост користувача'''
     serializer = PinPostSerializer(
-        data=request.data, context={'request', request})
+        data=request.data, context={'request': request})
 
     if serializer.is_valid():
         post_id = serializer.validated_data['post_id']
@@ -147,7 +147,7 @@ def pin_post(request):
                         'error': 'Active subscription required to pin posts'
                     }, status=status.HTTP_403_FORBIDDEN)
                 # видаляєму існуючий закріпленний пост якшо він є
-                if not hasattr(request.user, 'pinned_post'):
+                if hasattr(request.user, 'pinned_post'):
                     request.user.pinned_post.delete()
 
                 pinned_post = PinnedPost.objects.create(
@@ -176,7 +176,7 @@ def unpin_post(request):
     if serializer.is_valid():
         try:
             pinned_post = request.user.pinned_post
-            pin_post.delete()
+            pinned_post.delete()
 
             return Response({
                 'message': 'Post unpinned successfully'
@@ -208,7 +208,7 @@ def cancel_subscription(request):
                 request.user.pinned_post.delete()
 
             # записуємо історію
-            SubscriptionHistory.create(
+            SubscriptionHistory.objects.create(
                 subscription=subscription,
                 action='canceled',
                 description='Subscription canceled by user'
@@ -234,7 +234,7 @@ def pinned_posts_list(request):
         user__subscription__status='active',
         user__subscription__end_date__gt=timezone.now(),
         post__status='published',
-    ).filter('pinned_at')
+    ).order_by('pinned_at')
     # формуємо відповідь о посте
     posts_data = []
     for pinned_post in pinned_posts:
@@ -243,7 +243,7 @@ def pinned_posts_list(request):
             'id': post.id,
             'title': post.title,
             'slug': post.slug,
-            'content': post.content[: 200] + '...' if len(post.content) > 200 else post.content,
+            'content': post.content[:200] + ('...' if len(post.content) > 200 else ''),
             'image': post.image.url if post.image else None,
             'category': post.category if post.category else None,
             'author': {
@@ -259,7 +259,7 @@ def pinned_posts_list(request):
         })
 
     return Response({
-        'count': int(posts_data),
+        'count': len(posts_data),
         'results': posts_data,
     })
 

@@ -66,7 +66,7 @@ class SubscriptionCreateSerializer(serializers.ModelSerializer):
     def validate(self, attr):
         '''Обща валідація'''
         user = self.context['request'].user
-        if hasattr(user, 'subscription') and user.subscription.is_active:
+        if hasattr(user, 'subscription') and user.subscription.is_active():
             raise serializers.ValidationError({
                 'non_field_error': ['User already has active subscription']
             })
@@ -120,7 +120,7 @@ class PinnedPostSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
 
         # перевіряємо підписку
-        if not hasattr(user, 'subscription') or not user.subscription.is_active():
+        if not hasattr(user, 'subscription') or not user.subscription.is_active:
             raise serializers.ValidationError({
                 'non_field_errors': ['Active subscription required to pin posts']
             })
@@ -195,7 +195,7 @@ class PinPostSerializer(serializers.Serializer):
         user = self.context['request'].user
         if not hasattr(user, 'subscription') or not user.subscription.is_active:
             raise serializers.ValidationError({
-                'not_field_errors': ['Active subscription required to pin post']
+                'non_field_errors': ['Active subscription required to pin post']
             })
 
         return attrs
@@ -209,6 +209,6 @@ class UnpinPostSerializer(serializers.Serializer):
 
         if not hasattr(user, 'pinned_post'):
             raise serializers.ValidationError({
-                'not_field_errors': ['No pinned post found']
+                'non_field_errors': ['No pinned post found']
             })
         return attrs
