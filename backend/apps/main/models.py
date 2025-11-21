@@ -2,6 +2,8 @@ from django.db import models
 from django.conf import settings
 from django.utils.text import slugify
 from django.urls import reverse
+from django.db.models import Q, Case, When, Value, BooleanField, DateTimeField
+from django.utils import timezone
 
 
 class Category(models.Model):
@@ -36,7 +38,7 @@ class PostManager(models.Manager):
         return self.filter(
             pin_info__isnull=False,
             pin_info__user__subscription__status='active',
-            pin_info__user__subscription__end_data__gt=models.functions.now(),
+            pin_info__user__subscription__end_date__gt=models.functions.now(),
             status='published'
         ).select_related(
             'pin_info', 'pin_info__user', 'pin_info__user__subcription'
@@ -51,6 +53,37 @@ class PostManager(models.Manager):
         return self.select_related(
             'author', 'author__subscription', 'category'
         ).prefetch_related('pin_info')
+
+    def for_feed(self):
+        """Главная лента: закреплённые (активные) → сверху → обычные посты"""
+        return self.get_queryset().filter(status='published').annotate(
+            is_pinned_active=Case(
+                When(
+                    pin_info__isnull=False,
+                    pin_info__user__subscription__status='active',
+                    pin_info__user__subscription__end_date__gt=timezone.now(),
+                    then=Value(True)
+                ),
+                default=Value(False),
+                output_field=BooleanField()
+            ),
+            sort_date=Case(
+                When(
+                    pin_info__isnull=False,
+                    pin_info__user__subscription__status='active',
+                    pin_info__user__subscription__end_date__gt=timezone.now(),
+                    then='pin_info__pinned_at'
+                ),
+                default='created_at',
+                output_field=DateTimeField()
+            )
+        ).order_by(
+            '-is_pinned_active',   # закреплённые всегда сверху
+            '-sort_date',          # новые закреплённые / новые посты выше
+            '-created_at'
+        ).select_related(
+            'author', 'category', 'pin_info__user', 'author__subscription'
+        )
 
 
 class Post(models.Model):

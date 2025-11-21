@@ -39,30 +39,29 @@ class PostListCreateView(generics.ListCreateAPIView):
     ordering = ['-created_at']
 
     def get_queryset(self):
-        '''вертає пости з учотом прав доступа'''
-        queryset = Post.objects.select_related('author', 'category')
-
-        # фільтрація по правам
-        if not self.request.user.is_authenticated:
-            queryset = queryset.filter(status='published')
-        else:
-            queryset = queryset.filter(
-                Q(status='published') | Q(author=self.request.user)
-            )
-
-        # переевіряєм потрібна лі сортіровка с учотом закріпленних постов
         ordering = self.request.query_params.get('ordering', '')
-        show_pinned_post = not ordering or ordering in [
-            '-created_at', 'created_at']
+        use_feed_with_pins = not ordering or ordering in [
+            '-created_at', 'created_at', '']
 
-        if show_pinned_post:
-            return Post.get_post_for_feed().filter(
-                Q(status='published') | (
-                    Q(author=self.request.user) if self.request.user.is_authenticated else Q()
+        if use_feed_with_pins:
+            # ←←←←←←←←←←←←←←←←←←←←←←←←←←
+            feed_qs = Post.objects.for_feed()   # ← теперь точно существует!
+            # ←←←←←←←←←←←←←←←←←←←←←←←←←←
+
+            if not self.request.user.is_authenticated:
+                return feed_qs.filter(status='published')
+            else:
+                return feed_qs.filter(
+                    Q(status='published') | Q(author=self.request.user)
                 )
-            )
 
-        return queryset
+        # Обычная сортировка (по views, title и т.д.)
+        qs = Post.objects.select_related('author', 'category')
+        if not self.request.user.is_authenticated:
+            qs = qs.filter(status='published')
+        else:
+            qs = qs.filter(Q(status='published') | Q(author=self.request.user))
+        return qs
 
     def list(self, request, *args, **kwargs):
         response = super().list(request, *args, kwargs)
@@ -272,7 +271,7 @@ def toggle_post_pin_status(request, slug):
         Post, slug=slug, author=request.user, status='published')
 
     # перевіряєм підписку
-    if not hasattr(request.user, 'subscription') or request.user.subscription.is_active:
+    if not hasattr(request.user, 'subscription') or not request.user.subscription.is_active:
         return Response({
             'error': 'Active subscription required to pin post'
         }, status=status.HTTP_403_FORBIDDEN)

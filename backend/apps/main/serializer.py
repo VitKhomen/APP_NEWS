@@ -90,8 +90,8 @@ class PostDetailSerializer(serializers.ModelSerializer):
 
     def get_can_pin(self, obj):
         '''перевіряє, чи може користувач закріпіть пост'''
-        request = self.context.get('context')
-        if not request or not request.user.is_authenticated():
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
             return False
         return obj.can_be_pinned_by(request.user)
 

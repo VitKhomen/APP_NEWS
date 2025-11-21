@@ -3,10 +3,10 @@ from . import views
 
 
 urlpatterns = [
-    path('category/', views.CategoryListCreateView.as_view(), name='category-list'),
-    path('category/<slug:slug>/', views.CategoryDetailView.as_view(),
+    path('categories/', views.CategoryListCreateView.as_view(), name='category-list'),
+    path('categories/<slug:slug>/', views.CategoryDetailView.as_view(),
          name='category-detail'),
-    path('category/<slug:category_slug>/posts/',
+    path('categories/<slug:category_slug>/posts/',
          views.post_by_category, name='post-by-category'),
 
     path('', views.PostListCreateView.as_view(), name='post-list'),

@@ -46,7 +46,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         return {
             'id': obj.user.id,
             'username': obj.user.username,
-            'fullname': obj.user.fullname,
+            'fullname': obj.user.full_name,
             'email': obj.user.email,
         }
 
