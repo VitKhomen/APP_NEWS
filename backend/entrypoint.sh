@@ -1,69 +1,38 @@
-sh#!/bin/sh
+#!/bin/bash
 set -e
 
-echo "Waiting for PostgreSQL to be ready (max 300 sec)..."
+echo "Starting backend on Render free..."
 
-# Ждём пока база не ответит
-timeout=300
-counter=0
-until python <<EOF
-import sys
-import os
-from urllib.parse import urlparse
-import psycopg2
-from django.db import connection
-
-# Попытка простого подключения через psycopg2
-try:
-    db_url = os.getenv('DATABASE_URL')
-    if not db_url:
-        print("DATABASE_URL not set")
-        sys.exit(1)
-    parsed = urlparse(db_url)
-    conn = psycopg2.connect(
-        host=parsed.hostname,
-        port=parsed.port or 5432,
-        user=parsed.username,
-        password=parsed.password,
-        database=parsed.path[1:] or 'postgres',
-        connect_timeout=5
-    )
-    conn.close()
-    print("PostgreSQL is ready!")
-    sys.exit(0)
-except Exception as e:
-    print("Still waiting for PostgreSQL... (error: %s)" % e)
-    sys.exit(1)
-EOF
-do
-    if [ $counter -ge $timeout ]; then
-        echo "Database not ready after ${timeout}s. Giving up."
-        exit 1
+# Ждём Supabase Postgres (он стартует медленно)
+echo "Waiting for Supabase PostgreSQL..."
+for i in {1..60}; do
+    if python -c "import os, psycopg2; psycopg2.connect(os.getenv('DATABASE_URL'))" 2>/dev/null; then
+        echo "PostgreSQL ready!"
+        break
     fi
-    counter=$((counter + 3))
-    sleep 3
+    echo "   Still waiting... ($i/60)"
+    sleep 2
 done
+
+# Если не дождались — выходим
+if ! python -c "import os, psycopg2; psycopg2.connect(os.getenv('DATABASE_URL'))" >/dev/null 2>&1; then
+    echo "Supabase not ready after 120s"
+    exit 1
+fi
 
 echo "Running migrations..."
 python manage.py migrate --noinput
 
-echo "Creating superuser (if not exists)..."
-python manage.py shell <<EOF
-from django.contrib.auth import get_user_model
-User = get_user_model()
-if not User.objects.filter(is_superuser=True).exists():
-    User.objects.create_superuser(
-        username='admin',
-        email=os.getenv('ADMIN_EMAIL', 'admin@example.com'),
-        password=os.getenv('ADMIN_PASSWORD', 'admin123')
-    )
-    print("Superuser created")
-else:
-    print("Superuser already exists")
-EOF
+echo "Creating superuser..."
+python manage.py createsu || echo "Superuser already exists"
 
-echo "Collecting static files..."
+echo "Collecting static..."
 python manage.py collectstatic --noinput --clear
 
 echo "Starting Gunicorn..."
-exec gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+exec gunicorn config.wsgi:application \
+    --bind 0.0.0.0:$PORT \
+    --workers 2 \
+    --timeout 120 \
+    --access-logfile - \
+    --error-logfile -
