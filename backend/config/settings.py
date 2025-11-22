@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from decouple import config
+from decouple import config, Csv
 from datetime import timedelta
 import dj_database_url
 
@@ -11,8 +11,7 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1',
-                 'https://app-news-onm1.onrender.com']
-
+                 '.onrender.com', 'app-news-onm1.onrender.com']
 # Application definition
 DJANGO_APPS = [
     'django.contrib.admin',
@@ -175,11 +174,11 @@ REST_FRAMEWORK = {
 
 
 # CORS Configuration
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Укажите порт, на котором работает ваш Vue.js
-    "http://127.0.0.1:5173",
-    'app-news-eight.vercel.app'
-]
+CORS_ALLOWED_ORIGINS = config(
+    'CORS_ALLOWED_ORIGINS',
+    default='http://localhost:5173,http://127.0.0.1:5173,https://app-news-eight.vercel.app',
+    cast=Csv()
+)
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
     'accept',
