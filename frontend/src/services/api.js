@@ -6,7 +6,7 @@ import { useToast } from 'vue-toastification'
 const toast = useToast()
 
 // Базовая конфигурация API
-const API_BASE_URL = 'http://localhost:8000'
+const API_BASE_URL = 'https://app-news-onm1.onrender.com'
 
 // Создание экземпляра axios
 const api = axios.create({
