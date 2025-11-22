@@ -1,51 +1,69 @@
-#!/bin/bash
+sh#!/bin/sh
 set -e
 
-echo "🚀 Starting Render entrypoint script..."
+echo "Waiting for PostgreSQL to be ready (max 300 sec)..."
 
-# Ждём, пока база станет доступна (важно на Render)
-python << END
-import time
+# Ждём пока база не ответит
+timeout=300
+counter=0
+until python <<EOF
+import sys
 import os
 from urllib.parse import urlparse
 import psycopg2
+from django.db import connection
 
-db_url = os.getenv("DATABASE_URL")
-if db_url and db_url.startswith("postgres"):
+# Попытка простого подключения через psycopg2
+try:
+    db_url = os.getenv('DATABASE_URL')
+    if not db_url:
+        print("DATABASE_URL not set")
+        sys.exit(1)
     parsed = urlparse(db_url)
-    print("⏳ Waiting for PostgreSQL to be ready...")
-    for _ in range(30):
-        try:
-            psycopg2.connect(
-                host=parsed.hostname,
-                port=parsed.port,
-                user=parsed.username,
-                password=parsed.password,
-                dbname=parsed.path[1:]
-            )
-            print("✅ Database is ready!")
-            break
-        except Exception as e:
-            print("   ⏳ Still waiting... (30 sec max)")
-            time.sleep(1)
-    else:
-        print("❌ Database not ready in 30s")
-        exit(1)
-END
+    conn = psycopg2.connect(
+        host=parsed.hostname,
+        port=parsed.port or 5432,
+        user=parsed.username,
+        password=parsed.password,
+        database=parsed.path[1:] or 'postgres',
+        connect_timeout=5
+    )
+    conn.close()
+    print("PostgreSQL is ready!")
+    sys.exit(0)
+except Exception as e:
+    print("Still waiting for PostgreSQL... (error: %s)" % e)
+    sys.exit(1)
+EOF
+do
+    if [ $counter -ge $timeout ]; then
+        echo "Database not ready after ${timeout}s. Giving up."
+        exit 1
+    fi
+    counter=$((counter + 3))
+    sleep 3
+done
 
-echo "📦 Applying migrations..."
+echo "Running migrations..."
 python manage.py migrate --noinput
 
-echo "👤 Creating superuser (if not exists)..."
-python manage.py createsu || echo "Superuser already exists or failed (non-critical)"
+echo "Creating superuser (if not exists)..."
+python manage.py shell <<EOF
+from django.contrib.auth import get_user_model
+User = get_user_model()
+if not User.objects.filter(is_superuser=True).exists():
+    User.objects.create_superuser(
+        username='admin',
+        email=os.getenv('ADMIN_EMAIL', 'admin@example.com'),
+        password=os.getenv('ADMIN_PASSWORD', 'admin123')
+    )
+    print("Superuser created")
+else:
+    print("Superuser already exists")
+EOF
 
-echo "🗂️  Collecting static files..."
+echo "Collecting static files..."
 python manage.py collectstatic --noinput --clear
 
-echo "🌍 Starting Gunicorn on 0.0.0.0:\$PORT ..."
-exec gunicorn config.wsgi:application \
-    --bind 0.0.0.0:$PORT \
-    --workers 2 \
-    --log-level=info \
-    --access-logfile - \
-    --error-logfile -
+echo "Starting Gunicorn..."
+exec gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
