@@ -12,6 +12,7 @@ const API_BASE_URL = 'http://localhost:8000'
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
+  withCredentials: true, // ✅ ДОБАВИТЬ ЭТУ СТРОКУ!
   headers: {
     'Content-Type': 'application/json'
   }
@@ -129,9 +130,9 @@ export const categoriesAPI = {
 export const postsAPI = {
   getAll: (params) => api.get('/api/v1/posts/', { params }),
   getById: (slug) => api.get(`/api/v1/posts/${slug}/`),
-  create: (data) => api.post('/api/v1/posts/', data),
-  update: (slug, data) => api.put(`/api/v1/posts/${slug}/`, data),
-  updatePartial: (slug, data) => api.patch(`/api/v1/posts/${slug}/`, data),
+  create: (data, config = {}) => api.post('/api/v1/posts/', data, config), // ✅ ИСПРАВЛЕНО!
+  update: (slug, data, config = {}) => api.put(`/api/v1/posts/${slug}/`, data, config), // ✅ ИСПРАВЛЕНО!
+  updatePartial: (slug, data, config = {}) => api.patch(`/api/v1/posts/${slug}/`, data, config), // ✅ ИСПРАВЛЕНО!
   delete: (slug) => api.delete(`/api/v1/posts/${slug}/`),
   getMyPosts: (params) => api.get('/api/v1/posts/my-posts/', { params }),
   getPopular: () => api.get('/api/v1/posts/popular/'),
@@ -162,7 +163,7 @@ export const paymentAPI = {
 export const commentsAPI = {
   getAll: (params) => api.get('/api/v1/comments/', { params }),
   getById: (id) => api.get(`/api/v1/comments/${id}/`),
-  create: (data, config = {}) => api.post('/api/v1/posts/', data, config),
+  create: (data, config = {}) => api.post('/api/v1/comments/', data, config),
   update: (id, data) => api.put(`/api/v1/comments/${id}/`, data),
   updatePartial: (id, data) => api.patch(`/api/v1/comments/${id}/`, data),
   delete: (id) => api.delete(`/api/v1/comments/${id}/`),

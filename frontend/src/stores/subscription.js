@@ -21,21 +21,31 @@ export const useSubscriptionStore = defineStore('subscription', () => {
 
   // Действия
   const fetchPlans = async () => {
-    isLoading.value = true
-    try {
-      const response = await subscriptionAPI.getPlans()
-      // Исправляем: берем results из пагинированного ответа
-      plans.value = response.data.results || response.data || []
-      console.log('Fetched plans:', plans.value) // Для отладки
-      return response.data
-    } catch (error) {
-      console.error('Error fetching plans:', error)
+  isLoading.value = true
+  try {
+    const response = await subscriptionAPI.getPlans()
+    const data = response.data
+    
+    // Обрабатываем разные форматы ответа
+    if (Array.isArray(data)) {
+      plans.value = data
+    } else if (data.results && Array.isArray(data.results)) {
+      plans.value = data.results
+    } else {
+      console.warn('Unexpected response format:', data)
       plans.value = []
-      throw error
-    } finally {
-      isLoading.value = false
     }
+    
+    return response.data
+  } catch (error) {
+    console.error('Error fetching plans:', error)
+    plans.value = []
+    // Не пробрасываем ошибку дальше, чтобы не сломать UI
+    return { results: [] }
+  } finally {
+    isLoading.value = false
   }
+}
 
   const fetchSubscriptionStatus = async () => {
     isLoading.value = true
